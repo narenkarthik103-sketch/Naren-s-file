@@ -1,0 +1,44 @@
+#include <EmonLib.h>       // Current & Voltage calculation
+#include <WiFi.h>          // WiFi Connection
+#include <BlynkSimpleEsp32.h> // Blynk compatibility
+
+#define vCalibration 106.8
+#define currCalibration 0.52
+
+EnergyMonitor emon;
+char auth[] = "Your_Blynk_Auth_Token";
+char ssid[] = "Your_WiFi_SSID";
+char pass[] = "Your_WiFi_Password";
+
+BlynkTimer timer;
+
+void sendData() {
+  emon.calcVI(20,2000); // Calculate voltage and current
+  float Vrms = emon.Vrms;
+  float Irms = emon.Irms;
+  float realPower = emon.realPower;
+  float apparentPower = emon.apparentPower;
+  float powerFactor = emon.powerFactor;
+
+  // Send to Blynk or another IoT platform
+  Blynk.virtualWrite(V1, Vrms);          // Voltage
+  Blynk.virtualWrite(V2, Irms);          // Current
+  Blynk.virtualWrite(V3, realPower);     // Power
+  Blynk.virtualWrite(V4, powerFactor);   // Power Factor
+}
+
+void setup()
+{
+  Serial.begin(115200);
+  WiFi.begin(ssid, pass);
+  Blynk.begin(auth, ssid, pass);
+  emon.voltage(34, vCalibration, 1.7);      // 34 = Analog pin, calibration, phase_shift
+  emon.current(36, currCalibration);        // 36 = Analog pin, calibration
+  timer.setInterval(2000L, sendData);       // Update every 2 seconds
+}
+
+void loop()
+{
+  Blynk.run();
+  timer.run();
+}
